@@ -1,79 +1,56 @@
-/* eslint-disable class-methods-use-this */
-/* eslint-disable @typescript-eslint/member-ordering */
+/*
+ * Copyright © 2023 Lisk Foundation
+ *
+ * See the LICENSE file at the top-level directory of this distribution
+ * for licensing information.
+ *
+ * Unless otherwise agreed in a custom licensing agreement with the Lisk Foundation,
+ * no part of this software, including this file, may be copied, modified,
+ * propagated, or distributed except according to the terms contained in the
+ * LICENSE file.
+ *
+ * Removal or modification of this copyright notice is prohibited.
+ */
 
-import {
-    BaseModule,
-	ModuleMetadata,
-	// ModuleInitArgs,
-	// InsertAssetContext,
-	// BlockVerifyContext,
-	// TransactionVerifyContext,
-	// VerificationResult,
-	// TransactionExecuteContext,
-	// GenesisBlockExecuteContext,
-	// BlockExecuteContext,
-	// BlockAfterExecuteContext,
-	// VerifyStatus,
-} from 'lisk-sdk';
+import { BaseModule, ModuleInitArgs, ModuleMetadata, NFTMethod } from 'lisk-sdk';
 import { TestNftEndpoint } from './endpoint';
 import { TestNftMethod } from './method';
+import { MintNftCommand } from './commands/mint_nft';
+import { DestroyNftCommand } from './commands/destroy_nft';
 
 export class TestNftModule extends BaseModule {
-    public endpoint = new TestNftEndpoint(this.stores, this.offchainStores);
-    public method = new TestNftMethod(this.stores, this.events);
-    public commands = [];
+	public endpoint = new TestNftEndpoint(this.stores, this.offchainStores);
+	public method = new TestNftMethod(this.stores, this.events);
+	public mintNftCommand = new MintNftCommand(this.stores, this.events);
+	public destroyNftCommand = new DestroyNftCommand(this.stores, this.events);
+	public commands = [this.mintNftCommand, this.destroyNftCommand];
 
-	// public constructor() {
-	// 	super();
-	// 	// registeration of stores and events
-	// }
+	private _nftMethod!: NFTMethod;
+
+	public addDependencies(nftMethod: NFTMethod) {
+		this._nftMethod = nftMethod;
+	}
 
 	public metadata(): ModuleMetadata {
 		return {
 			...this.baseMetadata(),
 			endpoints: [],
+			commands: this.commands.map(command => ({
+				name: command.name,
+				params: command.schema,
+			})),
+			events: [],
 			assets: [],
 		};
 	}
 
-    // Lifecycle hooks
-    // public async init(_args: ModuleInitArgs): Promise<void> {
-	// 	// initialize this module when starting a node
-	// }
-
-	// public async insertAssets(_context: InsertAssetContext) {
-	// 	// initialize block generation, add asset
-	// }
-
-	// public async verifyAssets(_context: BlockVerifyContext): Promise<void> {
-	// 	// verify block
-	// }
-
-    // Lifecycle hooks
-	// public async verifyTransaction(_context: TransactionVerifyContext): Promise<VerificationResult> {
-		// verify transaction will be called multiple times in the transaction pool
-		// return { status: VerifyStatus.OK };
-	// }
-
-	// public async beforeCommandExecute(_context: TransactionExecuteContext): Promise<void> {
-	// }
-
-	// public async afterCommandExecute(_context: TransactionExecuteContext): Promise<void> {
-
-	// }
-	// public async initGenesisState(_context: GenesisBlockExecuteContext): Promise<void> {
-
-	// }
-
-	// public async finalizeGenesisState(_context: GenesisBlockExecuteContext): Promise<void> {
-
-	// }
-
-	// public async beforeTransactionsExecute(_context: BlockExecuteContext): Promise<void> {
-
-	// }
-
-	// public async afterTransactionsExecute(_context: BlockAfterExecuteContext): Promise<void> {
-
-	// }
+	// eslint-disable-next-line @typescript-eslint/require-await
+	public async init(_args: ModuleInitArgs) {
+		this.mintNftCommand.init({
+			nftMethod: this._nftMethod,
+		});
+		this.destroyNftCommand.init({
+			nftMethod: this._nftMethod,
+		});
+	}
 }
