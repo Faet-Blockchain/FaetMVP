@@ -17,6 +17,11 @@ add to config file before running, and to .lisk/faetapp/config file after runnin
 
 use "npm run build" and delete the .lisk/faetapp folder to reset the app from block 0
 
+
+pm2 start -n faet "./bin/run start --api-ws --api-host=127.0.0.1 --api-port=7887 --overwrite-config"
+
+
+
 ----------------
 
 you call commands via "./bin/run endpoint:invoke app_getRegisteredCommands"
