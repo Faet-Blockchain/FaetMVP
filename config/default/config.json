@@ -1,0 +1,41 @@
+{
+	"system": {
+		"dataPath": "/home/lisk/.lisk/beta-sdk-app",
+		"keepEventsForHeights": -1,
+		"logLevel": "info"
+	},
+	"rpc": {
+		"modes": ["ipc", "ws"],
+		"port": 7887,
+		"host": "207.246.73.137",
+		"allowedMethods": ["*"]
+	},
+	"network": {
+		"version": "1.0",
+		"seedPeers": [],
+		"port": 7667
+	},
+	"transactionPool": {
+		"maxTransactions": 4096,
+		"maxTransactionsPerAccount": 64,
+		"transactionExpiryTime": 10800000,
+		"minEntranceFeePriority": "0",
+		"minReplacementFeeDifference": "10"
+	},
+	"genesis": {
+		"block": {
+			"fromFile": "./config/genesis_block.blob"
+		},
+		"blockTime": 10,
+		"bftBatchSize": 103,
+		"maxTransactionsSize": 15360,
+		"chainID": "13371337"
+	},
+	"generator": {
+		"keys": {
+			"fromFile": "./config/dev-validators.json"
+		}
+	},
+	"modules": {},
+	"plugins": {}
+}
