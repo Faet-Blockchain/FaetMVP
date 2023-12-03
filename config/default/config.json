@@ -1,6 +1,6 @@
 {
 	"system": {
-		"dataPath": "/home/lisk/.lisk/faet6.1.0",
+		"dataPath": "/home/lisk/.lisk/faetapp",
 		"keepEventsForHeights": -1,
 		"logLevel": "info"
 	},
