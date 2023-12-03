@@ -1,6 +1,6 @@
 {
 	"system": {
-		"dataPath": "/home/lisk/.lisk/beta-sdk-app",
+		"dataPath": "/home/lisk/.lisk/faet6.1.0",
 		"keepEventsForHeights": -1,
 		"logLevel": "info"
 	},
