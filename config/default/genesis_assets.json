@@ -2521,8 +2521,8 @@
 				"nftSubstore": [],
 				"supportedNFTsSubstore": [
 					{
-						"chainID": "",
-						"supportedCollectionIDArray": []
+						"chainID": "13371337",
+						"supportedCollectionIDArray": ["00000001"]
 					}
 				]
 			},
