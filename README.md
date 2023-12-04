@@ -1,33 +1,23 @@
 # faet6.1.0
 
+This is an example implementation of a blockchain using the Lisk-SDK and the 6.1.0 Version NFT Module and example testNFT custom module, located here: 
+https://github.com/LiskHQ/lisk-sdk/tree/v6.1.0-rc.0/examples/interop/pos-mainchain-fast
 
-Changes from "lisk init"
+How to Use: 
 
-add the repository
-add to config file before running, and to .lisk/faetapp/config file after running 
+Clone this repository, and follow the instructions for launching a lisk-sdk blockchain here: 
+https://lisk.com/documentation/lisk-sdk/quickstart.html
 
-{
- "rpc": {
-   "modes": ["ipc", "ws"], // Only specify the modes you need to enable
-   "port": 7887,
-   "host": "127.0.0.1", // Use `0.0.0.0` to expose them on all available ethernet IP instances
-   "allowedMethods": ["*"]
- },
-}
+Install PM2 and navigate to the directory. Once there, use this command to launch the blockchain: 
 
-use "npm run build" and delete the .lisk/faetapp folder to reset the app from block 0
-
-
-pm2 start -n faet "./bin/run start --api-ws --api-host=127.0.0.1 --api-port=7887 --overwrite-config"
-
-
+pm2 start -n faet "./bin/run start --api-ws --api-host=127.0.0.1 --api-port=7887"
 
 ----------------
 
-you call commands via "./bin/run endpoint:invoke app_getRegisteredCommands"
+you call commands via "./bin/run endpoint:invoke [Command]"
 
-
--------------------
+------------------
+Here is the list of commands available from the endpoint: app_getRegisteredCommands
 
 [
    "app_getRegisteredEndpoints",
