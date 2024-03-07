@@ -86,9 +86,13 @@ Here is the list of commands available from the endpoint: app_getRegisteredComma
 Changelog: 
 
 Goal #1 of Milestone 3: 
+
 -Integrated Wallet Functionality
+
 -Users able to log-in with their passphrase
--Users able to store their passphrases inside games and password
-protect them
+
+-Users able to store their passphrases inside games and password protect them
+
 -Users able to check their balance via the status menu in-game
+
 -Users able to send transactions to other public addresses
