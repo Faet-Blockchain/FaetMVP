@@ -96,3 +96,12 @@ Goal #1 of Milestone 3:
 -Users able to check their balance via the status menu in-game
 
 -Users able to send transactions to other public addresses
+
+
+Goal #2 of Milestone 3: 
+
+-Created utility functions assisting in compiling and decompiling NFTs
+
+-Altered the blockchain NFT format to be able to operate with the JSON of an item including the image in base64 format
+
+-Updated in-game functions that dynamically inject the item into the game's memory and associate it with a weapon
