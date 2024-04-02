@@ -22,11 +22,157 @@ const liskCodec = require('@liskhq/lisk-codec');
 const { io } = require("socket.io-client");
 const jsome = require('jsome');
 const bip39 = require('bip39');
+const fs = require('fs').promises;
+
+// File paths for JSON files
+const weaponsFilePath = '../../data/Weapons.json';
+const actorsFilePath = '../../data/Actors.json';
 
 //Static Constants
 const publicKeyVariableId = 7; // ID to store the public key
 const passphraseVariableId = 8; // ID to store the encrypted passphrase
 const passwordProtectSwitch = 9; // ID to the switch that sets Passphrase protection via password
+
+var nftImageData = '';
+
+//----------------------------------------------   Generate Passphrase  ---------------------------------------------------
+
+function updateWeaponFromJSON(weaponData) {
+
+    try {
+
+        // Validate weaponData
+        if (!weaponData || !weaponData.id) {
+            console.error("Invalid weapon data");
+            return;
+        }
+
+        // Check if the weapon exists in the game's database
+        var weaponId = weaponData.id;
+        if (!$dataWeapons[weaponId]) {
+            console.error("Weapon with ID " + weaponId + " does not exist");
+            return;
+        }
+
+        // Update the weapon properties
+        var gameWeapon = $dataWeapons[weaponId];
+        for (var key in weaponData) {
+            if (weaponData.hasOwnProperty(key)) {
+                gameWeapon[key] = weaponData[key];
+            }
+        }
+
+        console.log("Weapon updated: ", gameWeapon.name);
+    } catch (e) {
+        console.error("Error parsing JSON or updating weapon: ", e);
+    }
+}
+
+function addWeaponToInventory(weaponId, quantity) {
+    if (!$dataWeapons[weaponId]) {
+        console.error("Weapon with ID " + weaponId + " does not exist");
+        return;
+    }
+
+    if (quantity <= 0) {
+        console.error("Quantity must be greater than 0");
+        return;
+    }
+
+    // Adding the weapon to the player's inventory
+    $gameParty.gainItem($dataWeapons[weaponId], quantity);
+    console.log("Added " + quantity + " of weapon ID " + weaponId + " to inventory.");
+}
+
+
+//----------------------------------------------  Show Weapon Image ------------------------------------------------------
+
+// Extend Window_ItemList's select method
+const _Window_ItemList_select = Window_ItemList.prototype.select;
+Window_ItemList.prototype.select = function(index) {
+    _Window_ItemList_select.call(this, index);
+    this._itemSelected = this.item() ? true : false;
+};
+
+// Extend Window_ItemList's processOk method for mouse clicks
+const _Window_ItemList_processOk = Window_ItemList.prototype.processOk;
+Window_ItemList.prototype.processOk = function() {
+    if (this._itemSelected) {
+        this.toggleItemActionWindow();
+    } else {
+        _Window_ItemList_processOk.call(this);
+    }
+};
+
+// Extend Window_ItemList's update method to check for keypresses
+const _Window_ItemList_update = Window_ItemList.prototype.update;
+Window_ItemList.prototype.update = function() {
+    _Window_ItemList_update.call(this);
+    if (this._itemSelected && Input.isTriggered('ok')) {
+        this.toggleItemActionWindow();
+    }
+    if (this._itemActionWindow && this._itemActionWindow.isOpen() && Input.isTriggered('cancel')) {
+        this.closeItemActionWindow();
+    }
+};
+
+// Toggle the item action window
+Window_ItemList.prototype.toggleItemActionWindow = function() {
+    if (!this._itemActionWindow || !this._itemActionWindow.isOpen()) {
+        this.openItemActionWindow();
+    } else {
+        this.closeItemActionWindow();
+    }
+};
+
+// Open the item action window
+Window_ItemList.prototype.openItemActionWindow = function() {
+    if (!this._itemActionWindow) {
+        const wx = (Graphics.boxWidth - 400) / 2;
+        const wy = (Graphics.boxHeight - 600) / 2;
+        this._itemActionWindow = new Window_Base(new Rectangle(wx, wy, 365, 365));
+        this.addChild(this._itemActionWindow);
+    }
+    const item = this.item();
+    this._itemActionWindow.contents.clear();
+    
+    // Replace 'yourBase64String' with the actual Base64 string for the image
+    
+    
+    this.drawImageFromBase64(this._itemActionWindow, nftImageData, 0, 0);
+
+    this._itemActionWindow.open();
+    this.deactivate();
+};
+
+// Function to draw image from Base64 string
+Window_ItemList.prototype.drawImageFromBase64 = function(window, base64, x, y) {
+    const image = new Image();
+    image.src = base64;
+    image.onload = function() {
+        const bitmap = new Bitmap(image.width, image.height);
+        bitmap.context.drawImage(image, 0, 0);
+        window.contents.blt(bitmap, 0, 0, image.width, image.height, x, y);
+    };
+};
+
+// Close the item action window
+Window_ItemList.prototype.closeItemActionWindow = function() {
+    if (this._itemActionWindow) {
+        this._itemActionWindow.close();
+        this.activate();
+    }
+};
+
+// Initialize the flag in the constructor
+const _Window_ItemList_initialize = Window_ItemList.prototype.initialize;
+Window_ItemList.prototype.initialize = function(rect) {
+    _Window_ItemList_initialize.call(this, rect);
+    this._itemSelected = false;
+    this._itemActionWindow = null;
+};
+
+
 
 //----------------------------------------------   Generate Passphrase  ---------------------------------------------------
 
@@ -56,7 +202,6 @@ async function handleNewGame(passphrase, passwordProtect) {
         const publicKey = await get_Lisk32AddressfromPassphrase(passphrase);
         let confirmedPassphrase = false;
         $gameVariables.setValue(publicKeyVariableId, publicKey);
-
         while (!confirmedPassphrase) {
 
             
@@ -88,6 +233,9 @@ async function handleNewGame(passphrase, passwordProtect) {
         // If not password protected, save the public key
         const publicKey = await get_Lisk32AddressfromPassphrase(passphrase);
         $gameVariables.setValue(publicKeyVariableId, publicKey);
+
+        //TEMPORARY WORKAROUND, REMOVE AFTER UI UPGRADE
+        $gameVariables.setValue(12, passphrase);
         showPassphraseOnStart();
     }
 }
@@ -508,7 +656,6 @@ async function getPassphrase() {
 //Encrypt Passphrase w/ Password
 async function encryptPassphrase(passphrase, password, passphraseVariableId){
     const encryptedPassphrase = await liskCrypto.encrypt.encryptMessageWithPassword(passphrase, password);
-    console.log(encryptedPassphrase);
     $gameVariables.setValue(passphraseVariableId, encryptedPassphrase);
     return encryptedPassphrase;
 }
@@ -557,7 +704,6 @@ async function promptSendTransaction() {
             SceneManager._scene.removeChild(passwordLabel);
             if (password) {
                 passphrase = await decryptPassphrase(password, 8); 
-                console.log(passphrase);
                 if (!passphrase || !bip39.validateMnemonic(passphrase)) {
                     console.error("Invalid passphrase.");
                     return false;
@@ -691,9 +837,49 @@ async function fundAccount(recipientAddress){
 
 //----------------------------------------------   Post NFT  ---------------------------------------------------
 
-
-async function postNFT(passphrase){
+/*
+async function postNFT(){
     try {
+        //lskbx988tt7xybrk7mohau8c7s6a5vxo95c3sj3jn
+        const privateKeyBuffer = Buffer.from("d6cd6cf732cae8be22a8cb55a5f3148fb0cf8dddc98f5786fc44422443b9422429f9ab6a552a58b3294147de22514665708094683a0373bc16aafdb911fa0a9a", 'hex');
+        
+        const recipientAddress = $gameVariables.value(7);
+        
+        const publicKeyBuffer = liskCrypto.ed.getPublicKeyFromPrivateKey(privateKeyBuffer);
+
+        //sign transaction
+
+        const nonce = await get_Nonce('lskbx988tt7xybrk7mohau8c7s6a5vxo95c3sj3jn');
+
+        const unsignedTransaction = build_NFTMintTransaction(publicKeyBuffer, recipientAddress,  nonce);
+
+        const signedTransaction = liskTx.signTransaction(unsignedTransaction, Buffer.from('13371337', 'hex'), privateKeyBuffer, mintNftParamsSchema);
+
+        const encodedTx = encodeTransaction(signedTransaction, signedTransaction.params, transactionSchema, mintNftParamsSchema);
+
+        const WS_RPC_ENDPOINT = 'ws://207.246.73.137:9901/rpc-v3';
+
+        const requestObject = {
+            jsonrpc: '2.0',
+            method: 'post.transactions',
+            params: {
+                "transaction": encodedTx
+            }
+        };
+
+        const answer = await callWebSocket(WS_RPC_ENDPOINT, requestObject);
+        return true;
+    } catch (error) {
+        console.error('Error:', error);
+        return false;
+    }
+}*/
+
+async function postNFT(){
+    try {
+
+        const passphrase = $gameVariables.value(12);
+
         const recipientAddress = await get_Lisk32AddressfromPassphrase(passphrase);        
 
         const privateKeyBuffer = await liskCrypto.ed.getPrivateKeyFromPhraseAndPath(passphrase, "m/44'/134'/0'");
@@ -721,6 +907,9 @@ async function postNFT(passphrase){
         };
 
         const answer = await callWebSocket(WS_RPC_ENDPOINT, requestObject);
+
+        console.log(answer);
+
         return true;
     } catch (error) {
         console.error('Error:', error);
@@ -728,13 +917,38 @@ async function postNFT(passphrase){
     }
 }
 
+async function processNFTs() {
+    try {
+        // Await the resolution of postNFT
+        const postNFTtransaction = await postNFT($gameVariables.value(7));
+        
+        // Wait for 30 seconds
+        await new Promise(resolve => setTimeout(resolve, 10000));
+
+        // After the delay, call getNFTs
+        const getNFTtransaction = await getNFTs();
+        
+        let stringFromHex = hexToString(getNFTtransaction.attributesArray[0].attributes);
+        
+        let itemNFT = JSON.parse(stringFromHex);
+
+        //push the item to the player's inventory
+        nftImageData = itemNFT.image;
+        updateWeaponFromJSON(itemNFT.data);
+        addWeaponToInventory(1, 1);
+
+    } catch (error) {
+        // Handle any errors that occur during the process
+        console.error("An error occurred:", error);
+    }
+}
 
 //----------------------------------------------   Show Balances  ---------------------------------------------------
 
-function getNFTs(passphrase) {
+function getNFTs() {
     return new Promise(async (resolve, reject) => {
         try {
-            const lisk32Address = await get_Lisk32AddressfromPassphrase(passphrase);
+            const lisk32Address = $gameVariables.value(7);
             const WS_RPC_ENDPOINT = 'ws://207.246.73.137:7887/rpc-ws';
             const requestObject = {
                 jsonrpc: "2.0",
@@ -751,12 +965,14 @@ function getNFTs(passphrase) {
             };
 
             ws.onmessage = (event) => {
-                // Message received from the server
+                // Message received from the server                
+
+                console.log(event.data);
 
                 const parsedResponse = JSON.parse(event.data);
                 ws.close();
-                if (parsedResponse.result.nfts[0] != null) {                    
-                    resolve("1337 Armor");
+                if (parsedResponse.result.nfts[0] != null) {             
+                    resolve(parsedResponse.result.nfts[0]);
                 } else {
                     resolve(0);
                 }
@@ -917,13 +1133,15 @@ function build_NFTMintTransaction(publicKeyBuffer, recipientAddress, nonceX){
 
     const addressBuffer = liskCrypto.address.getAddressFromLisk32Address(recipientAddress);
 
+    const sampleWeaponString = JSON.stringify(sampleWeaponNFT);
+
     // Create the asset for the Token Transfer transaction
     const transferParams = {
         address: addressBuffer, 
         collectionID: Buffer.from("00000000", "hex"),
         attributesArray: [{
             module: "testNft",
-            attributes: Buffer.from('1337', 'utf-8')
+            attributes: sampleWeaponString
         }]
     };
 
@@ -965,7 +1183,6 @@ async function callWebSocket(endpoint, requestObject) {
             // Emit the remote procedure call
             socket.emit('request', requestObject, answer => {
                 jsome(answer);
-                console.log(answer);
                 resolve(answer); // Resolve with the answer
                 socket.disconnect(); // Disconnect after receiving the response
             });
@@ -1006,6 +1223,15 @@ function showLabelText(labelText) {
 
     // Return the label object
     return passwordLabel;
+}
+
+// Convert Hex String to String
+function hexToString(hex) {
+    var string = '';
+    for (var i = 0; i < hex.length; i += 2) {
+        string += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+    }
+    return string;
 }
 
 //----------------------------------------------   Schemas  ---------------------------------------------------
@@ -1117,7 +1343,7 @@ const mintNftParamsSchema = {
 						fieldNumber: 1,
 					},
 					attributes: {
-						dataType: 'bytes',
+						dataType: 'string',
 						fieldNumber: 2,
 					},
 				},
@@ -1125,3 +1351,43 @@ const mintNftParamsSchema = {
 		},
 	},
 };
+
+/*
+const sampleWeaponNFT = {
+    "image": "data:image/png;base64,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",
+    "data": {
+        "id":1,
+        "animationId":6,
+        "description":"[Sword] A light and easy-to-wield short-bladed sword.",
+        "etypeId":1,
+        "traits":[
+        {
+            "code":31,
+            "dataId":1,
+            "value":0
+        },
+        {
+            "code":22,
+            "dataId":0,
+            "value":0
+        }
+        ],
+        "iconIndex":97,
+        "name":"Short Sword",
+        "note":"",
+        "params":[
+        0,
+        0,
+        8,
+        0,
+        0,
+        0,
+        0,
+        0
+        ],
+        "price":300,
+        "wtypeId":2
+    }
+};*/
+    
+const sampleWeaponNFT = {"image":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEUAAABGCAYAAACaGVmHAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsQAAA7EAZUrDhsAAALVSURBVHhe7Zq9ctpAFIVXKaiYYYY3oOMJaFJQJL3fwmVewcMruPVTMJMyKUMTkpqWxj20FERntde+LMegnxit5PvNwG5h5NHRd4+Qx9kxxxknfAqrobBQCBYKobedkmVZ2F2GnX7vQpEwttutX8FgMAi7gt1u56bTqd+z07fxIfTKFFiiDQHaEhgimCkV6UUoMCS2BIaIJTBEW3KNToeiw5BAdBiAhbHf78OOY+ND6GzRVilVQRsym838akVbks6ZAkPAZrPxKxiNRmFXrkNgyaXTNlMInTHlmiGgSY9oOhEKAtFhgCojUzYMwcaHkLQptyhVhplCSNKUW5YqI7lQbl2qDBsfQjKmtFWqDDOF0LopbZcqo9VQUihVho0PoRVTUipVhplCqGUKrnTdqxT3SNulyqgUimi//Hl0d1+KfdmPNx2ZW4Qh2PgQ3j0UGCIjI5bAELEEhsSWwJDYEhhyC0uAmUKo3SnCpW4RQzSp9oim9t1HgmGhSHir1cqNx2O/70IYgo0PobYpD4+nH1t8e/3uok2ZTCZ+L7BS1UiptomZQqhlChAbxBhmynq99isYDodh90pKPaIxUwiNTRGO+Z03K/6NzC3DIe/yn0GvxBwOh7Bzbj6f+zUFQ4TaocQgJAnjr3/PR0oFJ+HEgaQUhmDjQ/ivpjyQQ/15evLr9/t7v2pStASYKYTGpujCjU2BJWJIqlYwmn9P8e/O/cpfP4rtCbgrAbkzgdQDsvEh1DIFlnwN+89hBYuw6kOKUezPDSBFa8wUQiVT5KrDEjEEXQLQJ+xQuogBe7rWpGBOqVDiUgU6DFD2ZHRIcUBAP1i2hY0P4U1TYu2BLldWqlVhv6NtS4CZQrhqynG5zB97i+febCF+pHFF34szUxDGidZ5IL+fn/1L6HMgwMaHcDY+L2NDnlkEM+UD8qYpmr6bEWOmEEp9zf9omCkEC4VgoRAslDOc+wfQpya4R0mYEgAAAABJRU5ErkJggg==","data":{"id":1,"animationId":6,"description":"[Sword] A light and easy-to-wield short-bladed sword.","etypeId":1,"traits":[{"code":31,"dataId":1,"value":0},{"code":22,"dataId":0,"value":0}],"iconIndex":97,"name":"Short Sword","note":"","params":[0,0,8,0,0,0,0,0],"price":300,"wtypeId":2}};
