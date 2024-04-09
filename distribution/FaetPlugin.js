@@ -235,7 +235,7 @@ async function handleNewGame(passphrase, passwordProtect) {
         $gameVariables.setValue(publicKeyVariableId, publicKey);
 
         //TEMPORARY WORKAROUND, REMOVE AFTER UI UPGRADE
-        $gameVariables.setValue(12, passphrase);
+        //$gameVariables.setValue(12, passphrase);
         showPassphraseOnStart();
     }
 }
@@ -250,7 +250,7 @@ async function handleNewGame(passphrase, passwordProtect) {
         No:  Enter Passphrase
 */
 
-async function handleContinue() {
+async function handleEnterPassphrase() {
     let isValidPassphrase = false;
     let passphrase;
     let attempts = 0;
@@ -281,7 +281,7 @@ async function handleContinue() {
                 attempts++;
             }
         } catch (error) {
-            console.error("Error in handleContinue:", error);
+            console.error("Error in handleEnterPassphrase:", error);
             break;
         }
     }
@@ -636,14 +636,14 @@ async function getPassphrase() {
             }
         } else {
             // No encrypted passphrase found, call handleContinue
-            const handleContinueResult = await handleContinue();
-            if (handleContinueResult) {
+            const handleEnterPassphrase = await handleEnterPassphrase();
+            if (handleEnterPassphrase) {
                 $gameSwitches.setValue(6, true);
                 $gameSwitches.setValue(7, true);
-                return handleContinueResult;
+                return handleEnterPassphrase;
             } else {
                 $gameSwitches.setValue(7, false);
-                return false; // handleContinue failed or was cancelled
+                return false; // handleEnterPassphrase failed or was cancelled
             }
         }
     } catch (error) {
@@ -875,10 +875,10 @@ async function postNFT(){
     }
 }*/
 
-async function postNFT(){
+async function postNFT(passphrase){
     try {
 
-        const passphrase = $gameVariables.value(12);
+        //const passphrase = $gameVariables.value(12);
 
         const recipientAddress = await get_Lisk32AddressfromPassphrase(passphrase);        
 
@@ -917,16 +917,17 @@ async function postNFT(){
     }
 }
 
-async function processNFTs() {
+async function processNFTs(passphrase) {
     try {
+        
         // Await the resolution of postNFT
-        const postNFTtransaction = await postNFT($gameVariables.value(7));
+        const postNFTtransaction = await postNFT(passphrase);
         
         // Wait for 30 seconds
         await new Promise(resolve => setTimeout(resolve, 10000));
 
         // After the delay, call getNFTs
-        const getNFTtransaction = await getNFTs();
+        const getNFTtransaction = await getNFTs($gameVariables.value(7));
         
         let stringFromHex = hexToString(getNFTtransaction.attributesArray[0].attributes);
         
@@ -943,12 +944,60 @@ async function processNFTs() {
     }
 }
 
+async function promptMintNFT() {
+    try {
+        let passphrase;
+        const encryptedPassphrase = $gameVariables.value(8); // Check for encrypted passphrase
+
+        if (encryptedPassphrase) {
+            // Prompt for password to decrypt the passphrase
+            
+            const passwordLabel = showLabelText('Enter Password to Decrypt Passphrase');
+            const password = await window.getStringInputTextBox(-1);
+            
+            SceneManager._scene.removeChild(passwordLabel);
+            if (password) {
+                passphrase = await decryptPassphrase(password, 8); 
+                if (!passphrase || !bip39.validateMnemonic(passphrase)) {
+                    console.error("Invalid passphrase.");
+                    return false;
+                }
+            } else {
+                console.error("No password entered.");
+                SceneManager._scene.removeChild(passwordLabel);
+                return false;
+            }
+        } else {
+            // Prompt for passphrase directly
+            
+            const passphraseLabel2 = showLabelText('Enter Passphrase');
+            passphrase = await window.getStringInputTextArea(-1);
+            if (!passphrase || !bip39.validateMnemonic(passphrase)) {
+                console.error("Invalid passphrase.");
+                return false;
+            }
+            
+            SceneManager._scene.removeChild(passphraseLabel2);
+        }
+
+        const passwordLabel = showLabelText('Please wait. Minting confirmation may take up to 15 seconds.');
+        const mintNFT = await processNFTs(passphrase);
+
+        $gameSwitches.setValue(6, true);
+        return true;
+
+    } catch (error) {
+        console.error("Error in promptSendTransaction:", error);
+        return false;
+    }
+}
+
 //----------------------------------------------   Show Balances  ---------------------------------------------------
 
-function getNFTs() {
+function getNFTs(lisk32Address) {
     return new Promise(async (resolve, reject) => {
         try {
-            const lisk32Address = $gameVariables.value(7);
+            //const lisk32Address = $gameVariables.value(7);
             const WS_RPC_ENDPOINT = 'ws://207.246.73.137:7887/rpc-ws';
             const requestObject = {
                 jsonrpc: "2.0",
