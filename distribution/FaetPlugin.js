@@ -91,13 +91,17 @@ function addWeaponToInventory(weaponId, quantity) {
 const _Window_ItemList_select = Window_ItemList.prototype.select;
 Window_ItemList.prototype.select = function(index) {
     _Window_ItemList_select.call(this, index);
-    this._itemSelected = this.item() ? true : false;
+    if (SceneManager._scene instanceof Scene_Item) {
+        this._itemSelected = this.item() ? true : false;
+    } else {
+        this._itemSelected = false;
+    }
 };
 
 // Extend Window_ItemList's processOk method for mouse clicks
 const _Window_ItemList_processOk = Window_ItemList.prototype.processOk;
 Window_ItemList.prototype.processOk = function() {
-    if (this._itemSelected) {
+    if (this._itemSelected && SceneManager._scene instanceof Scene_Item) {
         this.toggleItemActionWindow();
     } else {
         _Window_ItemList_processOk.call(this);
@@ -108,11 +112,13 @@ Window_ItemList.prototype.processOk = function() {
 const _Window_ItemList_update = Window_ItemList.prototype.update;
 Window_ItemList.prototype.update = function() {
     _Window_ItemList_update.call(this);
-    if (this._itemSelected && Input.isTriggered('ok')) {
-        this.toggleItemActionWindow();
-    }
-    if (this._itemActionWindow && this._itemActionWindow.isOpen() && Input.isTriggered('cancel')) {
-        this.closeItemActionWindow();
+    if (SceneManager._scene instanceof Scene_Item) {
+        if (this._itemSelected && Input.isTriggered('ok')) {
+            this.toggleItemActionWindow();
+        }
+        if (this._itemActionWindow && this._itemActionWindow.isOpen() && Input.isTriggered('cancel')) {
+            this.closeItemActionWindow();
+        }
     }
 };
 
