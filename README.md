@@ -3,6 +3,8 @@
 This is an example implementation of a blockchain using the Lisk-SDK and the 6.1.0 Version NFT Module and example testNFT custom module, located here: 
 https://github.com/LiskHQ/lisk-sdk/tree/v6.1.0-rc.0/examples/interop/pos-mainchain-fast
 
+[This project is deprecated since Lisk has moved to L2 on the OP Stack]
+
 How to Use: 
 
 Clone this repository, and follow the instructions for launching a lisk-sdk blockchain here: 
